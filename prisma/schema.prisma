@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+generator zod {
+  provider = "zod-prisma-types"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String  @id @default(uuid())
+  snipeItUserId Int     @unique
+  email         String  @unique
+  name          String
+  weekQuotaUsed Int
+  reservations  Reservation[]
+  courses       UserCourse[]
+}
+
+model Asset {
+  id        Int          @id
+  assetTag  String       @unique
+  modelName String
+  category  String
+  reservations Reservation[]
+  courses    AssetCourse[]
+}
+
+model Reservation {
+  id        Int      @id @default(autoincrement())
+  userId    String   @map("user_id")
+  assetId   Int      @map("asset_id")
+  startTime DateTime
+  endTime   DateTime
+  block     Block
+  user      User     @relation(fields: [userId], references: [id])
+  asset     Asset    @relation(fields: [assetId], references: [id])
+
+  @@unique([assetId, startTime, block])
+}
+
+enum Block {
+  BLOCK_A
+  BLOCK_B
+  BLOCK_C
+}
+
+model Course {
+  id        Int          @id @default(autoincrement())
+  code      String
+  semester  String
+  users     UserCourse[]
+  assets    AssetCourse[]
+}
+
+model UserCourse {
+  userId   String @map("user_id")
+  courseId Int    @map("course_id")
+  user     User   @relation(fields: [userId], references: [id])
+  course   Course @relation(fields: [courseId], references: [id])
+
+  @@id([userId, courseId])
+}
+
+model AssetCourse {
+  assetId   Int    @map("asset_id")
+  courseId  Int    @map("course_id")
+  asset     Asset  @relation(fields: [assetId], references: [id])
+  course    Course @relation(fields: [courseId], references: [id])
+
+  @@id([assetId, courseId])
+}

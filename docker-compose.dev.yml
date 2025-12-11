@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  database:
+    image: postgres:16
+    container_name: database
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    networks:
+      - dev-network
+
+  snipe-db:
+    image: mariadb:10.11
+    container_name: snipe-db
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    networks:
+      - dev-network
+
+  snipeit:
+    image: snipe/snipe-it:latest
+    container_name: snipeit
+    ports:
+      - "8080:80"
+    depends_on:
+      - snipe-db
+    networks:
+      - dev-network
+    env_file:
+      - ./.env
+    volumes:
+      - ./.env:/var/www/html/.env:ro
+      - ./docker/apache/servername.conf:/etc/apache2/conf-enabled/servername.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost/setup || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+networks:
+  dev-network:
+    driver: bridge
