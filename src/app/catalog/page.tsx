@@ -72,6 +72,6 @@ export default function CatalogPage() {
           <EquipmentCard key={idx} {...item} />
         ))}
       </div>
-    </main>
+    </main>                                  
   );
 }
