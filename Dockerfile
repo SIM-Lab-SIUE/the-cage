@@ -5,7 +5,10 @@ WORKDIR /app
 # Dependencies stage
 FROM base AS deps
 COPY package.json package-lock.json ./
-RUN npm ci
+# Use `npm install` in the container build to avoid failing when lockfile
+# and package.json are out of sync on the host. Install only production deps
+# to keep image small.
+RUN npm install --omit=dev --no-audit --no-fund
 
 # Builder stage
 FROM deps AS builder
@@ -22,6 +25,17 @@ RUN npm run build
 # Runner stage
 FROM node:20.9.0-alpine AS runner
 WORKDIR /app
-COPY --from=builder /app .
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/node_modules ./node_modules
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
+# Expose port
 EXPOSE 3000
-CMD ["npm", "run", "start"]
+
+# Start the application
+CMD ["npm", "start"]

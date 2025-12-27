@@ -16,13 +16,10 @@ const equipmentList = [
 async function addEquipmentToSnipeIT() {
   for (const equipment of equipmentList) {
     try {
-      const response = await snipeITClient.request("/hardware", {
-        method: "POST",
-        body: JSON.stringify({
-          name: equipment.name,
-          category: equipment.category,
-          status: "Available",
-        }),
+      const response = await snipeITClient.addAsset({
+        name: equipment.name,
+        category: equipment.category,
+        status: "Available",
       });
       console.log(`Added: ${equipment.name}`, response);
     } catch (error) {

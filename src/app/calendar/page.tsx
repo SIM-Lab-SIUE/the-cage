@@ -2,6 +2,13 @@ import React from 'react';
 import snipeITClient from '@/services/snipeit';
 import ResourceCalendar from '@/components/calendar/ResourceCalendar';
 
+interface Asset {
+  id: string | number;
+  modelName: string;
+  assetTag: string;
+  [key: string]: unknown;
+}
+
 export const dynamic = 'force-dynamic'; // Ensure this page is not statically cached if we want fresh data
 
 export default async function CalendarPage() {
@@ -9,7 +16,7 @@ export default async function CalendarPage() {
   const assets = await snipeITClient.getAssets({ limit: 20 });
 
   // Transform Snipe-IT assets to FullCalendar resources
-  const resources = assets.map((asset: any) => ({
+  const resources = assets.map((asset: Asset) => ({
     id: asset.id.toString(),
     title: `${asset.modelName} (${asset.assetTag})`,
     extendedProps: asset,

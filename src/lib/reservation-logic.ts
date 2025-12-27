@@ -1,4 +1,4 @@
-import { PrismaClient, Block } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -52,8 +52,7 @@ export async function validateReservationRequest(
   // Check availability
   const existingReservation = await prisma.reservation.findFirst({
     where: {
-      assetId: asset.id,
-      block: block as Block, // Explicitly cast block to the correct type
+      snipeAssetId: asset.id,
       startTime: date,
     },
   });

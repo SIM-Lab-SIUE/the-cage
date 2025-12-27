@@ -1,4 +1,10 @@
 class SnipeITClient {
+    async addAsset(asset: { name: string; category: string; status: string }): Promise<any> {
+      return this.request('/hardware', {
+        method: 'POST',
+        body: JSON.stringify(asset),
+      });
+    }
   private apiUrl: string;
   private apiKey: string;
 

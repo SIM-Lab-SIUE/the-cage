@@ -1,0 +1,67 @@
+
+services:
+  nextjs-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NODE_OPTIONS=--max-old-space-size=4096
+      - SNIPEIT_API_URL=http://snipeit/api/v1
+      - SNIPEIT_API_KEY=${SNIPEIT_API_KEY}
+    depends_on:
+      - snipeit
+    networks:
+      - app-network
+
+  snipeit:
+    depends_on: 
+      - mysql
+    image: snipe/snipe-it:latest
+    env_file:
+      - .env
+    environment:
+      - APP_KEY=${APP_KEY}
+      - APP_ENV=${APP_ENV}
+      - APP_DEBUG=${APP_DEBUG}
+      - APP_URL=${APP_URL}
+      - DB_CONNECTION=${DB_CONNECTION}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_DATABASE=${DB_DATABASE}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - MAIL_MAILER=${MAIL_MAILER}
+      - MAIL_HOST=${MAIL_HOST}
+      - MAIL_PORT=${MAIL_PORT}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_FROM_ADDR=${MAIL_FROM_ADDR}
+      - MAIL_FROM_NAME=${MAIL_FROM_NAME}
+    ports:
+      - "8080:80"
+      - "8443:443"
+    networks:
+      - app-network
+
+  mysql:
+    image: mysql:5.7
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: snipe_root_password
+      MYSQL_DATABASE: snipeit
+      MYSQL_USER: snipe
+      MYSQL_PASSWORD: snipe_password
+    ports:
+      - "3307:3306"
+    networks:
+      - app-network
+    volumes:
+      - snipeit-db-data:/var/lib/mysql
+
+networks:
+  app-network:
+volumes:
+  snipeit-db-data:

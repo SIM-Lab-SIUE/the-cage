@@ -7,54 +7,72 @@ generator zod {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id            String  @id @default(uuid())
-  snipeItUserId Int     @unique
-  email         String  @unique
+  id            String        @id @default(uuid())
+  snipeItUserId Int           @unique
+  email         String        @unique
   name          String
   weekQuotaUsed Int
+  hasOutstandingBalance Boolean @default(false) // For fee tracking
   reservations  Reservation[]
   courses       UserCourse[]
+  fines         Fine[]
 }
 
 model Asset {
-  id        Int          @id
-  assetTag  String       @unique
-  modelName String
-  category  String
+  id           Int           @id
+  assetTag     String        @unique
+  modelName    String
+  category     String
   reservations Reservation[]
-  courses    AssetCourse[]
+  courses      AssetCourse[]
 }
 
 model Reservation {
-  id        Int      @id @default(autoincrement())
-  userId    String   @map("user_id")
-  assetId   Int      @map("asset_id")
-  startTime DateTime
-  endTime   DateTime
-  block     Block
-  user      User     @relation(fields: [userId], references: [id])
-  asset     Asset    @relation(fields: [assetId], references: [id])
+  id           String   @id @default(uuid())
+  snipeAssetId Int
+  userId       String
+  startTime    DateTime
+  endTime      DateTime
+  status       String   @default("PENDING") // PENDING, CONFIRMED, CHECKED_OUT, COMPLETED, CANCELLED
+  assetType    String   @default("Unknown") // For 3-block limit checking
 
-  @@unique([assetId, startTime, block])
+  user  User  @relation(fields: [userId], references: [id])
+  asset Asset @relation(fields: [snipeAssetId], references: [id])
+
+  @@map("reservations")
 }
 
-enum Block {
-  BLOCK_A
-  BLOCK_B
-  BLOCK_C
+model Fine {
+  id        String   @id @default(uuid())
+  userId    String
+  reason    String   // e.g., "Late Return", "Damaged Equipment"
+  amount    Float    // Fee amount in dollars
+  dateIssued DateTime @default(now())
+  isPaid    Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@map("fines")
+}
+
+model BlackoutDate {
+  id     String   @id @default(uuid())
+  date   DateTime @unique
+  reason String
+
+  @@map("blackout_dates")
 }
 
 model Course {
-  id        Int          @id @default(autoincrement())
-  code      String
-  semester  String
-  users     UserCourse[]
-  assets    AssetCourse[]
+  id       Int           @id @default(autoincrement())
+  code     String
+  semester String
+  users    UserCourse[]
+  assets   AssetCourse[]
 }
 
 model UserCourse {
@@ -67,10 +85,10 @@ model UserCourse {
 }
 
 model AssetCourse {
-  assetId   Int    @map("asset_id")
-  courseId  Int    @map("course_id")
-  asset     Asset  @relation(fields: [assetId], references: [id])
-  course    Course @relation(fields: [courseId], references: [id])
+  assetId  Int    @map("asset_id")
+  courseId Int    @map("course_id")
+  asset    Asset  @relation(fields: [assetId], references: [id])
+  course   Course @relation(fields: [courseId], references: [id])
 
   @@id([assetId, courseId])
 }

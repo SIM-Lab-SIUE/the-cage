@@ -8,8 +8,8 @@ import interactionPlugin from '@fullcalendar/interaction';
 export interface CalendarResource {
   id: string;
   title: string;
-  extendedProps?: any;
-  [key: string]: any;
+  extendedProps?: Record<string, unknown>;
+  [key: string]: unknown;
 }
 
 export interface CalendarEvent {
@@ -18,7 +18,7 @@ export interface CalendarEvent {
   start: Date | string;
   end: Date | string;
   title: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface ResourceCalendarProps {
@@ -27,6 +27,7 @@ interface ResourceCalendarProps {
 }
 
 export default function ResourceCalendar({ resources, events }: ResourceCalendarProps) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleDateClick = (arg: any) => {
     console.log('Clicked resource:', arg.resource);
     console.log('Clicked date:', arg.date);

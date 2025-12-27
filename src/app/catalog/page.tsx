@@ -1,63 +1,70 @@
 import EquipmentCard from "@/components/EquipmentCard";
 
-const equipmentList = [
+type EquipmentItem = {
+  name: string;
+  imageUrl: string;
+  category: string;
+  status: 'Available' | 'Unavailable';
+};
+
+const equipmentList: EquipmentItem[] = [
   {
     name: "Canon XF100",    
-    imageUrl: "../../../public/images/Canon XF100.jpg",
+    imageUrl: "/images/Canon XF100.jpg",
     category: "Video Camera",
     status: "Available",
   },
   {
     name: "Canon XF605",
-    imageUrl: "../../../public/images/Canon XF605.jpg",
+    imageUrl: "/images/Canon XF605.jpg",
     category: "Video Camera",
     status: "Available",
   },
   {
     name: "Hollyland Solidcom C1",
-    imageUrl: "../../../public/images/Hollyland Solidcom C1.jpg",
+    imageUrl: "/images/Hollyland Solidcom C1.jpg",
     category: "Intercom System",
     status: "Available",
   },
   {
     name: "Manfrotto 528XB",
-    imageUrl: "../../../public/images/Manfrotto 528XB.jpg",
+    imageUrl: "/images/Manfrotto 528XB.jpg",
     category: "Tripod",
     status: "Available",
   },
   {
     name: "Manfrotto Compact Light",
-    imageUrl: "../../../public/images/Manfrotto Compact Light.jpg",
+    imageUrl: "/images/Manfrotto Compact Light.jpg",
     category: "Tripod",
     status: "Available",
   },
   {
     name: "Sennheiser ME66",
-    imageUrl: "../../../public/images/Sennheiser ME66.jpg",
+    imageUrl: "/images/Sennheiser ME66.jpg",
     category: "Microphone",
     status: "Available",
   },
   {
     name: "Yamaha QL1",
-    imageUrl: "../../../public/images/Yamaha QL1.jpg",
+    imageUrl: "/images/Yamaha QL1.jpg",
     category: "Audio Console",
     status: "Available",
   },
   {
     name: "Zoom H5 Studio",
-    imageUrl: "../../../public/images/Zoom H5studio.jpg",
+    imageUrl: "/images/Zoom H5studio.jpg",
     category: "Audio Recorder",
     status: "Available",
   },
   {
     name: "Zoom H6 Essential",
-    imageUrl: "../../../public/images/Zoom H6essential.jpg",
+    imageUrl: "/images/Zoom H6essential.jpg",
     category: "Audio Recorder",
     status: "Available",
   },
   {
     name: "Zoom H6 Studio",
-    imageUrl: "../../../public/images/Zoom H6studio.jpg",
+    imageUrl: "/images/Zoom H6studio.jpg",
     category: "Audio Recorder",
     status: "Available",
   }
