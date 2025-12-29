@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+import { auth } from '../../../../auth';
 import { PrismaClient } from '@prisma/client';
-import { startOfWeek, endOfWeek } from 'date-fns';
+import { validateReservationRequest } from '@/lib/block-limit';
 
 const prisma = new PrismaClient();
 
@@ -14,23 +14,22 @@ const prisma = new PrismaClient();
  */
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession();
+    const session = await auth();
     
     if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { assetId, startTime, endTime, assetType } = await req.json();
+    const { assetId, startTime, endTime, category } = await req.json();
 
-    if (!assetId || !startTime || !endTime || !assetType) {
+    if (!assetId || !startTime || !endTime || !category) {
       return NextResponse.json(
-        { error: 'Missing required fields: assetId, startTime, endTime, assetType' },
+        { error: 'Missing required fields: assetId, startTime, endTime, category' },
         { status: 400 }
       );
     }
 
-    // Use email as temporary user identifier until full auth is set up
-    const userId = session.user.email || 'anonymous';
+    const userId = session.user.id;
     const start = new Date(startTime);
     const end = new Date(endTime);
 
@@ -38,7 +37,7 @@ export async function POST(req: Request) {
     const overlap = await prisma.reservation.findFirst({
       where: {
         snipeAssetId: assetId,
-        status: { in: ['PENDING', 'CONFIRMED'] },
+        status: { in: ['PENDING', 'CONFIRMED', 'CHECKED_OUT'] },
         OR: [
           {
             startTime: { lte: end },
@@ -55,31 +54,20 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2. Check 3-Block Limit
-    const weekStart = startOfWeek(start, { weekStartsOn: 1 }); // Monday
-    const weekEnd = endOfWeek(start, { weekStartsOn: 1 });
+    // 2. Check 3-Block Limit using the dedicated utility
+    const blockValidation = await validateReservationRequest(userId, category, start);
 
-    const weeklyReservations = await prisma.reservation.findMany({
-      where: {
-        userId,
-        assetType,
-        startTime: { gte: weekStart },
-        endTime: { lte: weekEnd },
-        status: { in: ['PENDING', 'CONFIRMED'] },
-      },
-    });
-
-    if (weeklyReservations.length >= 3) {
+    if (!blockValidation.success) {
       return NextResponse.json(
         {
           error: 'Block Limit Exceeded',
-          message: `You have reached the maximum of 3 blocks per week for ${assetType}`,
+          message: blockValidation.message,
         },
         { status: 403 }
       );
     }
 
-    // 3. Create Reservation
+    // 3. Create Reservation in Shadow Ledger
     const reservation = await prisma.reservation.create({
       data: {
         snipeAssetId: assetId,
@@ -87,15 +75,21 @@ export async function POST(req: Request) {
         startTime: start,
         endTime: end,
         status: 'PENDING',
-        assetType,
+        category,
       },
+    });
+
+    // Update reservation status to CONFIRMED
+    await prisma.reservation.update({
+      where: { id: reservation.id },
+      data: { status: 'CONFIRMED' },
     });
 
     return NextResponse.json(
       {
         success: true,
         reservationId: reservation.id,
-        message: 'Reservation created successfully',
+        message: 'Reservation created successfully.',
       },
       { status: 201 }
     );

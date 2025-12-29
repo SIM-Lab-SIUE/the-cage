@@ -9,7 +9,11 @@ const customJestConfig = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
-  testEnvironment: 'jest-environment-jsdom',
+  testEnvironment: 'jest-environment-node',
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+  transformIgnorePatterns: [
+    'node_modules/(?!(msw|@mswjs|@bundled-es-modules|until-async|strict-event-emitter|is-node-process)/)',
+  ],
 };
 
 module.exports = createJestConfig(customJestConfig);

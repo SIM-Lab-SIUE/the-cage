@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 generator zod {
@@ -39,11 +40,13 @@ model Reservation {
   startTime    DateTime
   endTime      DateTime
   status       String   @default("PENDING") // PENDING, CONFIRMED, CHECKED_OUT, COMPLETED, CANCELLED
-  assetType    String   @default("Unknown") // For 3-block limit checking
+  category     String   // Category for 3-block limit checking (e.g., "Video Camera", "Audio Recorder")
 
   user  User  @relation(fields: [userId], references: [id])
   asset Asset @relation(fields: [snipeAssetId], references: [id])
 
+  @@index([userId, category, startTime, endTime])
+  @@index([snipeAssetId, startTime, endTime])
   @@map("reservations")
 }
 

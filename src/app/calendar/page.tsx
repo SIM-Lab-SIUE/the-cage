@@ -25,7 +25,7 @@ export default async function CalendarPage() {
   return (
     <div className="container mx-auto p-4 h-screen flex flex-col">
       <h1 className="text-2xl font-bold mb-4">Equipment Availability</h1>
-      <div className="flex-grow">
+      <div className="grow">
         <ResourceCalendar resources={resources} events={[]} />
       </div>
     </div>

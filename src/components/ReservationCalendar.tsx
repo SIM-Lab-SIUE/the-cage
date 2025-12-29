@@ -1,11 +1,14 @@
-"use client";
+'use client';
 
 import React from 'react';
-import FullCalendar from '@fullcalendar/react';
+import dynamic from 'next/dynamic';
 import resourceTimelinePlugin from '@fullcalendar/resource-timeline';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import timeGridPlugin from '@fullcalendar/timegrid';
+
+// Dynamically import FullCalendar to avoid SSR hydration issues
+const FullCalendar = dynamic(() => import('@fullcalendar/react'), { ssr: false });
 
 interface ReservationCalendarProps {
   events: Array<{
@@ -19,22 +22,20 @@ interface ReservationCalendarProps {
 }
 
 const ReservationCalendar: React.FC<ReservationCalendarProps> = ({ events, onSelectSlot }) => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleSelect = (selectionInfo: any) => {
-    const start = selectionInfo.start as Date;
-p    const end = selectionInfo.end as Date;
-    const resource = selectionInfo.resource as { id: string } | undefined;
+  const handleSelect = (selectionInfo: { start: Date; end: Date; resource?: { id: string } }) => {
+    const start = selectionInfo.start;
+    const resource = selectionInfo.resource;
 
     // Ensure the selected time slot matches the fixed 4-hour blocks
     const startHour = start.getHours();
-    const endHour = end.getHours();
+    const endHour = selectionInfo.end.getHours();
 
     if (
       (startHour === 9 && endHour === 13) ||
       (startHour === 14 && endHour === 18)
     ) {
       if (resource) {
-        onSelectSlot(start, end, resource.id);
+        onSelectSlot(start, selectionInfo.end, resource.id);
       }
     } else {
       alert('Please select a valid 4-hour block (09:00-13:00 or 14:00-18:00).');

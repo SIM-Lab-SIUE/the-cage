@@ -1,10 +1,10 @@
-import { NextAuthOptions } from 'next-auth';
+import { NextAuthConfig } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 
 /**
  * Factory function to generate NextAuth configuration based on the AUTH_PROVIDER environment variable.
  */
-export function getAuthConfig(): NextAuthOptions {
+export function getAuthConfig(): NextAuthConfig {
   const authProvider = process.env.AUTH_PROVIDER || 'MockCredentials';
 
   switch (authProvider) {
@@ -40,8 +40,10 @@ export function getAuthConfig(): NextAuthOptions {
               password: { label: 'Password', type: 'password' },
             },
             async authorize(credentials) {
-              if (credentials?.email?.endsWith('@siue.edu')) {
-                return { id: '1', name: 'Mock User', email: credentials.email };
+              const email = typeof credentials?.email === 'string' ? credentials.email : '';
+
+              if (email.endsWith('@siue.edu')) {
+                return { id: '1', name: 'Mock User', email } as any;
               }
               return null;
             },

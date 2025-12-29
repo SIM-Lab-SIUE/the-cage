@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+import { auth } from '../../../../auth';
 import { PrismaClient } from '@prisma/client';
-import snipeITClient from '@/services/snipeit';
+import { checkoutAsset } from '@/lib/snipe-it';
 
 const prisma = new PrismaClient();
 
@@ -17,7 +17,7 @@ const prisma = new PrismaClient();
  */
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession();
+    const session = await auth();
 
     if (!session || !session.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -55,18 +55,28 @@ export async function POST(req: Request) {
       );
     }
 
+    // Verify the reservation is still within the valid time window
+    const now = new Date();
+    if (now > reservation.endTime) {
+      return NextResponse.json(
+        {
+          error: 'Reservation expired',
+          message: 'This reservation end time has passed.',
+        },
+        { status: 400 }
+      );
+    }
+
     // 2. Call Snipe-IT checkout
     try {
-      const expectedCheckin = reservation.endTime.toISOString().split('T')[0]; // YYYY-MM-DD
-      const snipeResponse = await snipeITClient.checkOutAsset(
+      const snipeResponse = await checkoutAsset(
         reservation.snipeAssetId,
-        reservation.user.snipeItUserId,
-        expectedCheckin
+        reservation.user.snipeItUserId
       );
 
       if (!snipeResponse || snipeResponse.status === 'error') {
         throw new Error(
-          `Snipe-IT checkout failed: ${snipeResponse?.messages || 'Unknown error'}`
+          `Snipe-IT checkout failed: ${snipeResponse?.messages?.join(' ') || 'Unknown error'}`
         );
       }
     } catch (snipeError) {
@@ -80,7 +90,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3. Update local reservation status
+    // 3. Sync Shadow Ledger with Snipe-IT checkout
+    // Update reservation status to CHECKED_OUT in Shadow Ledger
+    // This is the point of synchronization between ephemeral reservation state and actual custody
     const updatedReservation = await prisma.reservation.update({
       where: { id: reservationId },
       data: { status: 'CHECKED_OUT' },

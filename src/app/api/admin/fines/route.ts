@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+import { auth } from '../../../../../auth';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -17,7 +17,7 @@ const prisma = new PrismaClient();
  */
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession();
+    const session = await auth();
 
     // Verify staff/admin role (check if user email contains 'admin' or has admin flag)
     if (!session || !session.user) {
@@ -84,7 +84,7 @@ export async function POST(req: Request) {
  */
 export async function GET(req: Request) {
   try {
-    const session = await getServerSession();
+    const session = await auth();
 
     // Verify staff/admin role
     if (!session || !session.user) {

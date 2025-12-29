@@ -17,6 +17,7 @@ class SnipeITClient {
     const url = `${this.apiUrl}${endpoint}`;
     const headers = {
       'Authorization': `Bearer ${this.apiKey}`,
+      'Accept': 'application/json',
       'Content-Type': 'application/json',
       ...options.headers,
     };
@@ -35,7 +36,13 @@ class SnipeITClient {
         retries -= 1;
       } else {
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          // Surface API error body if present, else status code
+          try {
+            const err = JSON.parse(text);
+            throw new Error(err?.error || err?.messages?.join(' ') || `HTTP error! status: ${response.status}`);
+          } catch {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
         }
         try {
           return JSON.parse(text);
