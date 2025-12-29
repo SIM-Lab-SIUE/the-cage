@@ -25,8 +25,8 @@ export async function GET() {
       );
     }
 
-    // Fetch hardware from Snipe-IT
-    const response = await fetch(`${SNIPE_IT_API_URL}/hardware?limit=100`, {
+    // Fetch hardware from Snipe-IT with proper limit
+    const response = await fetch(`${SNIPE_IT_API_URL}/hardware?limit=500&status=RTD`, {
       headers: {
         'Authorization': `Bearer ${SNIPE_IT_API_KEY}`,
         'Accept': 'application/json',

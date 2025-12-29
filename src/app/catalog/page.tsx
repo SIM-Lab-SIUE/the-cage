@@ -1,27 +1,68 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import EquipmentCard from '@/components/EquipmentCard';
-import { useEquipment } from '@/hooks/useEquipment';
+import Link from 'next/link';
+
+interface EquipmentItem {
+  id: number;
+  assetTag: string;
+  modelName: string;
+  category: string;
+  isAvailable: boolean;
+}
+
+interface CategoryGroup {
+  category: string;
+  total: number;
+  available: number;
+  checkedOut: number;
+  items: EquipmentItem[];
+}
 
 export default function CatalogPage() {
-  const { equipment, loading, error } = useEquipment();
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [categoryGroups, setCategoryGroups] = useState<CategoryGroup[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Get unique categories for filtering
-  const categories = Array.from(new Set(equipment.map(item => item.category)));
+  useEffect(() => {
+    const fetchCatalog = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/catalog/summary');
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch catalog');
+        }
 
-  // Filter equipment based on category and search
-  const filteredEquipment = equipment.filter(item => {
-    const matchesCategory = !selectedCategory || item.category === selectedCategory;
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        const data = await response.json();
+        setCategoryGroups(data.categoryGroups || []);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        setError(message);
+        console.error('Catalog fetch error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCatalog();
+  }, []);
+
+  // Get all equipment items
+  const allEquipment = categoryGroups.flatMap(g => g.items);
+
+  // Filter equipment
+  const filteredEquipment = allEquipment.filter(item => {
+    const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
+    const matchesSearch = item.modelName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          item.assetTag.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
   const handleReserve = (assetId: number) => {
-    // Navigate to reservation page or open modal
     window.location.href = `/catalog/${assetId}`;
   };
 
@@ -47,72 +88,107 @@ export default function CatalogPage() {
 
   return (
     <main className="min-h-screen bg-gray-50 p-8">
-      <h1 className="text-3xl font-bold mb-8 text-siue-red">Equipment Catalog</h1>
-
-      {/* Search and Filter Section */}
-      <div className="mb-8 space-y-4">
-        {/* Search Bar */}
-        <div className="flex gap-2">
-          <input
-            type="text"
-            placeholder="Search by equipment name or asset tag..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-siue-red">Equipment Catalog</h1>
+            <p className="text-gray-600 mt-2">Browse available equipment and make reservations</p>
+          </div>
+          <Link
+            href="/calendar"
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            View Calendar
+          </Link>
         </div>
 
-        {/* Category Filter */}
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setSelectedCategory(null)}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              selectedCategory === null
-                ? 'bg-blue-600 text-white'
-                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            All Categories ({equipment.length})
-          </button>
-          {categories.map(category => {
-            const count = equipment.filter(item => item.category === category).length;
-            return (
+        {/* Category Stats */}
+        {!loading && categoryGroups.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            {categoryGroups.map(group => (
+              <div key={group.category} className="bg-white rounded-lg shadow p-4">
+                <h3 className="text-sm font-medium text-gray-600 mb-1">{group.category}</h3>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold text-gray-900">{group.available}</span>
+                  <span className="text-sm text-gray-500">/ {group.total} available</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Search and Filter Section */}
+        <div className="mb-8 space-y-4">
+          {/* Search Bar */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Search by equipment name or asset tag..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Category Filter */}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setSelectedCategory('all')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                selectedCategory === 'all'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              All Categories ({allEquipment.length})
+            </button>
+            {categoryGroups.map(group => (
               <button
-                key={category}
-                onClick={() => setSelectedCategory(category)}
+                key={group.category}
+                onClick={() => setSelectedCategory(group.category)}
                 className={`px-4 py-2 rounded-lg transition-colors ${
-                  selectedCategory === category
+                  selectedCategory === group.category
                     ? 'bg-blue-600 text-white'
                     : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
                 }`}
               >
-                {category} ({count})
+                {group.category} ({group.total})
               </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Equipment Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-        {filteredEquipment.length > 0 ? (
-          filteredEquipment.map((item) => (
-            <EquipmentCard
-              key={item.id}
-              asset={item}
-              onReserve={handleReserve}
-            />
-          ))
-        ) : (
-          <div className="col-span-full text-center py-12">
-            <p className="text-gray-600 text-lg">No equipment found matching your criteria.</p>
+            ))}
           </div>
-        )}
-      </div>
+        </div>
 
-      {/* Stats Footer */}
-      <div className="mt-12 text-center text-gray-600">
-        <p>Showing {filteredEquipment.length} of {equipment.length} items</p>
+        {/* Equipment Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          {filteredEquipment.length > 0 ? (
+            filteredEquipment.map((item) => (
+              <EquipmentCard
+                key={item.id}
+                asset={{
+                  id: item.id,
+                  name: item.modelName,
+                  assetTag: item.assetTag,
+                  category: item.category,
+                  status: item.isAvailable ? 'Ready to Deploy' : 'Checked Out',
+                  isAvailable: item.isAvailable,
+                }}
+                onReserve={handleReserve}
+              />
+            ))
+          ) : (
+            <div className="col-span-full text-center py-12">
+              <p className="text-gray-600 text-lg">No equipment found matching your criteria.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Stats Footer */}
+        <div className="mt-12 text-center text-gray-600">
+          <p>Showing {filteredEquipment.length} of {allEquipment.length} items</p>
+        </div>
       </div>
     </main>
   );

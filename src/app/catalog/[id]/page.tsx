@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import AvailabilityCalendar from '@/components/AvailabilityCalendar';
+import { format, parseISO } from 'date-fns';
 
 interface Asset {
   id: number;
@@ -21,21 +23,47 @@ interface Asset {
   custom_fields?: Record<string, { field: string; value: string | null }>;
 }
 
+interface DayAvailability {
+  date: string;
+  dayOfWeek: string;
+  blocks: {
+    A: { available: boolean; startTime: string; endTime: string };
+    B: { available: boolean; startTime: string; endTime: string };
+  };
+}
+
+interface UserBlockUsage {
+  category: string;
+  blocksUsed: number;
+  blocksRemaining: number;
+  canReserve: boolean;
+}
+
+interface AvailabilityData {
+  availability: DayAvailability[];
+  userBlockUsage?: UserBlockUsage | null;
+}
+
 export default function EquipmentDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [asset, setAsset] = useState<Asset | null>(null);
+  const [availability, setAvailability] = useState<AvailabilityData | null>(null);
   const [loading, setLoading] = useState(true);
   const [reserving, setReserving] = useState(false);
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedBlock, setSelectedBlock] = useState<'A' | 'B' | ''>('');
+  const [selectedStartTime, setSelectedStartTime] = useState('');
+  const [selectedEndTime, setSelectedEndTime] = useState('');
 
   useEffect(() => {
     fetchAsset();
+    fetchAvailability();
   }, [params.id]);
 
   const fetchAsset = async () => {
     try {
-      const response = await fetch(`/api/equipment?id=${params.id}`);
+      const id = (await Promise.resolve(params)).id || params.id;
+      const response = await fetch(`/api/equipment?id=${id}`);
       const data = await response.json();
       
       if (data.rows && data.rows.length > 0) {
@@ -48,8 +76,27 @@ export default function EquipmentDetailPage({ params }: { params: { id: string }
     }
   };
 
+  const fetchAvailability = async () => {
+    try {
+      const id = (await Promise.resolve(params)).id || params.id;
+      const response = await fetch(`/api/equipment/${id}/availability`);
+      const data = await response.json();
+      
+      setAvailability(data);
+    } catch (error) {
+      console.error('Error fetching availability:', error);
+    }
+  };
+
+  const handleBlockSelect = (date: string, block: 'A' | 'B', startTime: string, endTime: string) => {
+    setSelectedDate(date);
+    setSelectedBlock(block);
+    setSelectedStartTime(startTime);
+    setSelectedEndTime(endTime);
+  };
+
   const handleReservation = async () => {
-    if (!selectedDate || !selectedBlock) {
+    if (!selectedDate || !selectedBlock || !selectedStartTime || !selectedEndTime) {
       alert('Please select a date and time block');
       return;
     }
@@ -57,25 +104,14 @@ export default function EquipmentDetailPage({ params }: { params: { id: string }
     setReserving(true);
 
     try {
-      const start = new Date(selectedDate);
-      const end = new Date(selectedDate);
-
-      if (selectedBlock === 'A') {
-        start.setHours(9, 0, 0, 0);
-        end.setHours(13, 0, 0, 0);
-      } else {
-        start.setHours(14, 0, 0, 0);
-        end.setHours(18, 0, 0, 0);
-      }
-
       const response = await fetch('/api/reserve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           assetId: asset?.id,
-          startTime: start.toISOString(),
-          endTime: end.toISOString(),
-          assetType: asset?.category.name || 'Unknown',
+          startTime: selectedStartTime,
+          endTime: selectedEndTime,
+          category: asset?.category.name || 'Unknown',
         }),
       });
 
@@ -123,16 +159,6 @@ export default function EquipmentDetailPage({ params }: { params: { id: string }
   }
 
   const isAvailable = asset.status_label.status_type === 'deployable';
-
-  // Get minimum date (tomorrow)
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const minDate = tomorrow.toISOString().split('T')[0];
-
-  // Get max date (30 days from now)
-  const maxDate = new Date();
-  maxDate.setDate(maxDate.getDate() + 30);
-  const maxDateStr = maxDate.toISOString().split('T')[0];
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -208,84 +234,72 @@ export default function EquipmentDetailPage({ params }: { params: { id: string }
         </div>
 
         {/* Reservation Form */}
-        {isAvailable && (
-          <div className="bg-white rounded-lg shadow-lg p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Make a Reservation</h2>
+        {isAvailable && availability && (
+          <>
+            <AvailabilityCalendar
+              availability={availability.availability}
+              userBlockUsage={availability.userBlockUsage}
+              onSelectBlock={handleBlockSelect}
+              selectedDate={selectedDate}
+              selectedBlock={selectedBlock as 'A' | 'B'}
+            />
 
-            <div className="space-y-6">
-              {/* Date Selection */}
-              <div>
-                <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Date
-                </label>
-                <input
-                  type="date"
-                  id="date"
-                  min={minDate}
-                  max={maxDateStr}
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              {/* Time Block Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Select Time Block
-                </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <button
-                    onClick={() => setSelectedBlock('A')}
-                    className={`p-4 border-2 rounded-lg text-left transition-all ${
-                      selectedBlock === 'A'
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  >
-                    <div className="font-semibold text-gray-900">Block A</div>
-                    <div className="text-sm text-gray-600">9:00 AM - 1:00 PM</div>
-                  </button>
-
-                  <button
-                    onClick={() => setSelectedBlock('B')}
-                    className={`p-4 border-2 rounded-lg text-left transition-all ${
-                      selectedBlock === 'B'
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  >
-                    <div className="font-semibold text-gray-900">Block B</div>
-                    <div className="text-sm text-gray-600">2:00 PM - 6:00 PM</div>
-                  </button>
+            {/* Confirmation Section */}
+            {selectedDate && selectedBlock && (
+              <div className="bg-white rounded-lg shadow-lg p-8 mt-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Confirm Your Reservation</h2>
+                
+                <div className="bg-gray-50 rounded-lg p-6 mb-6">
+                  <dl className="space-y-3">
+                    <div className="flex justify-between">
+                      <dt className="text-sm font-medium text-gray-600">Equipment:</dt>
+                      <dd className="text-sm font-semibold text-gray-900">{asset.model?.name || asset.name}</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-sm font-medium text-gray-600">Asset Tag:</dt>
+                      <dd className="text-sm font-semibold text-gray-900">{asset.asset_tag}</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-sm font-medium text-gray-600">Date:</dt>
+                      <dd className="text-sm font-semibold text-gray-900">
+                        {format(parseISO(selectedDate), 'EEEE, MMMM d, yyyy')}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-sm font-medium text-gray-600">Time:</dt>
+                      <dd className="text-sm font-semibold text-gray-900">
+                        {selectedBlock === 'A' ? '9:00 AM - 1:00 PM' : '2:00 PM - 6:00 PM'}
+                      </dd>
+                    </div>
+                  </dl>
                 </div>
-              </div>
 
-              {/* Important Notes */}
-              <div className="bg-blue-50 rounded-lg p-4">
-                <h4 className="text-sm font-semibold text-blue-900 mb-2">Important:</h4>
-                <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-                  <li>You can reserve up to 3 blocks per week per equipment type</li>
-                  <li>Late returns incur a $15 fee</li>
-                  <li>Equipment must be returned by the end of your time block</li>
-                  <li>You'll receive a QR code to show when picking up</li>
-                </ul>
-              </div>
+                {/* Important Notes */}
+                <div className="bg-blue-50 rounded-lg p-4 mb-6">
+                  <h4 className="text-sm font-semibold text-blue-900 mb-2">Important:</h4>
+                  <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+                    <li>You can reserve up to 3 blocks per week per equipment type</li>
+                    <li>Late returns incur a $15 fee</li>
+                    <li>Equipment must be returned by the end of your time block</li>
+                    <li>You'll receive a QR code to show when picking up</li>
+                  </ul>
+                </div>
 
-              {/* Reserve Button */}
-              <button
-                onClick={handleReservation}
-                disabled={!selectedDate || !selectedBlock || reserving}
-                className={`w-full py-3 px-4 rounded-md font-medium text-white transition-colors ${
-                  !selectedDate || !selectedBlock || reserving
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700'
-                }`}
-              >
-                {reserving ? 'Processing...' : 'Confirm Reservation'}
-              </button>
-            </div>
-          </div>
+                {/* Reserve Button */}
+                <button
+                  onClick={handleReservation}
+                  disabled={reserving}
+                  className={`w-full py-3 px-4 rounded-md font-medium text-white transition-colors ${
+                    reserving
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-siue-red hover:bg-red-700'
+                  }`}
+                >
+                  {reserving ? 'Processing...' : 'Confirm Reservation'}
+                </button>
+              </div>
+            )}
+          </>
         )}
 
         {!isAvailable && (

@@ -1,6 +1,7 @@
 // auth.config.ts
 import type { NextAuthConfig } from "next-auth"
 import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id"
+import Credentials from "next-auth/providers/credentials"
 
 /**
  * Auth configuration for NextAuth v5
@@ -18,11 +19,39 @@ export const authConfig = {
         },
       },
     }),
+    // Optional dev-only credentials provider for UAT
+    ...(process.env.AUTH_DEV_CREDENTIALS === "1"
+      ? [
+          Credentials({
+            id: "credentials",
+            name: "Dev Credentials",
+            credentials: {
+              email: { label: "Email", type: "text" },
+              password: { label: "Password", type: "password" },
+            },
+            authorize: async (credentials) => {
+              const email = (credentials?.email || "").toString().toLowerCase().trim()
+              const name = email.split("@")[0] || "Test User"
+              if (!email) return null
+              // Allow any password in dev; simple role heuristic
+              const isStaff = email.endsWith("@siue.edu") && email.startsWith("staff")
+              return {
+                id: `dev-${email}`,
+                email,
+                name,
+                role: isStaff ? "staff" : "student",
+              } as any
+            },
+          }),
+        ]
+      : []),
   ],
-  pages: {
-    signIn: '/login',
-    error: '/login',
-  },
+  pages: process.env.AUTH_DEV_CREDENTIALS === "1"
+    ? undefined
+    : {
+        signIn: '/login',
+        error: '/login',
+      },
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user

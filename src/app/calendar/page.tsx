@@ -1,32 +1,71 @@
 import React from 'react';
-import snipeITClient from '@/services/snipeit';
-import ResourceCalendar from '@/components/calendar/ResourceCalendar';
+import { PrismaClient } from '@prisma/client';
+import UnifiedCalendar from '@/components/calendar/UnifiedCalendar';
 
-interface Asset {
-  id: string | number;
-  modelName: string;
-  assetTag: string;
-  [key: string]: unknown;
-}
+const prisma = new PrismaClient();
 
-export const dynamic = 'force-dynamic'; // Ensure this page is not statically cached if we want fresh data
+export const dynamic = 'force-dynamic';
 
 export default async function CalendarPage() {
-  // Fetch assets from Snipe-IT
-  const assets = await snipeITClient.getAssets({ limit: 20 });
+  // Fetch all assets from database
+  const assets = await prisma.asset.findMany({
+    orderBy: [
+      { category: 'asc' },
+      { modelName: 'asc' },
+    ],
+  });
 
-  // Transform Snipe-IT assets to FullCalendar resources
-  const resources = assets.map((asset: Asset) => ({
+  // Fetch all confirmed reservations for the next 30 days
+  const today = new Date();
+  const futureDate = new Date();
+  futureDate.setDate(today.getDate() + 30);
+
+  const reservations = await prisma.reservation.findMany({
+    where: {
+      status: { in: ['PENDING', 'CONFIRMED', 'CHECKED_OUT'] },
+      startTime: { gte: today },
+      endTime: { lte: futureDate },
+    },
+    include: {
+      user: {
+        select: {
+          name: true,
+        },
+      },
+      asset: true,
+    },
+    orderBy: {
+      startTime: 'asc',
+    },
+  });
+
+  // Transform data for calendar
+  const resources = assets.map(asset => ({
     id: asset.id.toString(),
     title: `${asset.modelName} (${asset.assetTag})`,
-    extendedProps: asset,
+    category: asset.category,
+  }));
+
+  const events = reservations.map(res => ({
+    id: res.id,
+    resourceId: res.snipeAssetId.toString(),
+    start: res.startTime.toISOString(),
+    end: res.endTime.toISOString(),
+    title: res.status === 'CHECKED_OUT' ? 'Checked Out' : 'Reserved',
+    backgroundColor: res.status === 'CHECKED_OUT' ? '#ef4444' : '#3b82f6',
+    borderColor: res.status === 'CHECKED_OUT' ? '#dc2626' : '#2563eb',
   }));
 
   return (
-    <div className="container mx-auto p-4 h-screen flex flex-col">
-      <h1 className="text-2xl font-bold mb-4">Equipment Availability</h1>
-      <div className="grow">
-        <ResourceCalendar resources={resources} events={[]} />
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-[95%] mx-auto">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Equipment Availability Calendar</h1>
+          <p className="text-gray-600">
+            View all equipment reservations and availability across the next 30 days
+          </p>
+        </div>
+        <UnifiedCalendar resources={resources} events={events} />
       </div>
     </div>
   );

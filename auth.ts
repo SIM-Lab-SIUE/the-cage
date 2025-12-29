@@ -11,7 +11,8 @@ const prisma = new PrismaClient()
  */
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
-  adapter: PrismaAdapter(prisma),
+  // In dev credentials mode, avoid adapter writes and use pure JWT sessions
+  adapter: process.env.AUTH_DEV_CREDENTIALS === "1" ? undefined : PrismaAdapter(prisma),
   session: {
     strategy: "jwt",
   },

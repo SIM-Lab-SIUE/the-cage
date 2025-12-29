@@ -3,15 +3,16 @@ import { redirect } from 'next/navigation';
 import { PrismaClient } from '@prisma/client';
 import Link from 'next/link';
 import QRCodeDisplay from '@/components/QRCodeDisplay';
+import { IcsDownloadButton, PrintButton } from '@/components/ClientActions';
 
 const prisma = new PrismaClient();
 
 interface ReservationSuccessPageProps {
-  searchParams: { id?: string };
+  searchParams: Promise<{ id?: string }>;
 }
 
 export default async function ReservationSuccessPage({ searchParams }: ReservationSuccessPageProps) {
-  const reservationId = searchParams.id;
+  const { id: reservationId } = await searchParams;
 
   if (!reservationId) {
     redirect('/dashboard');
@@ -33,6 +34,8 @@ export default async function ReservationSuccessPage({ searchParams }: Reservati
   // Format dates
   const pickupDate = new Date(reservation.startTime);
   const returnDate = new Date(reservation.endTime);
+  const pickupIso = pickupDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  const returnIso = returnDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
@@ -134,7 +137,7 @@ export default async function ReservationSuccessPage({ searchParams }: Reservati
           <p className="text-sm font-medium text-gray-700 mb-3">Add to Calendar:</p>
           <div className="grid grid-cols-2 gap-3">
             <a
-              href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=Equipment+Pickup:+${encodeURIComponent(reservation.asset.modelName)}&dates=${pickupDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z/${returnDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z&details=Asset+Tag:+${reservation.asset.assetTag}%0AReservation+ID:+${reservation.id}&location=Equipment+Office`}
+              href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=Equipment+Pickup:+${encodeURIComponent(reservation.asset.modelName)}&dates=${pickupIso}/${returnIso}&details=Asset+Tag:+${reservation.asset.assetTag}%0AReservation+ID:+${reservation.id}&location=Equipment+Office`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
@@ -144,39 +147,14 @@ export default async function ReservationSuccessPage({ searchParams }: Reservati
               </svg>
               Google Calendar
             </a>
-            <button
-              onClick={() => {
-                // Generate .ics file
-                const icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//The Cage//Equipment Reservation//EN
-BEGIN:VEVENT
-UID:${reservation.id}@the-cage
-DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z
-DTSTART:${pickupDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z
-DTEND:${returnDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z
-SUMMARY:Equipment Pickup: ${reservation.asset.modelName}
-DESCRIPTION:Asset Tag: ${reservation.asset.assetTag}\\nReservation ID: ${reservation.id}
-LOCATION:Equipment Office
-STATUS:CONFIRMED
-END:VEVENT
-END:VCALENDAR`;
-                
-                const blob = new Blob([icsContent], { type: 'text/calendar' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `reservation-${reservation.id}.ics`;
-                a.click();
-                URL.revokeObjectURL(url);
-              }}
+            <IcsDownloadButton
+              reservationId={reservation.id}
+              assetModelName={reservation.asset.modelName}
+              assetTag={reservation.asset.assetTag}
+              pickupIso={pickupIso}
+              returnIso={returnIso}
               className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-            >
-              <svg className="h-5 w-5 mr-2 text-red-600" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V9h14v10z"/>
-              </svg>
-              Outlook / iCal
-            </button>
+            />
           </div>
         </div>
 
@@ -197,12 +175,7 @@ END:VCALENDAR`;
         </div>
 
         {/* Print Button */}
-        <button
-          onClick={() => window.print()}
-          className="w-full mt-3 text-sm text-gray-600 hover:text-gray-900 underline"
-        >
-          Print this page
-        </button>
+        <PrintButton className="w-full mt-3 text-sm text-gray-600 hover:text-gray-900 underline" />
       </div>
     </div>
   );
