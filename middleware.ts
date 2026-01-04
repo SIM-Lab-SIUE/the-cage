@@ -12,15 +12,15 @@ export default auth((req) => {
 
   // Public routes that don't require authentication
   const isPublicRoute = 
+    pathname === '/' ||
     pathname === '/login' ||
+    pathname.startsWith('/api/auth') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/static') ||
     pathname === '/favicon.ico'
 
   if (!isPublicRoute && !isLoggedIn) {
-    const loginUrl = new URL('/login', req.url)
-    loginUrl.searchParams.set('callbackUrl', pathname)
-    return Response.redirect(loginUrl)
+    return Response.redirect(new URL('/', req.url))
   }
 
   return undefined

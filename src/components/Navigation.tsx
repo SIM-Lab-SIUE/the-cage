@@ -12,7 +12,8 @@ interface NavigationProps {
 
 export default function Navigation({ session }: NavigationProps) {
   const pathname = usePathname();
-  const isAdmin = session.user?.email?.includes('admin') || false;
+  const userRole = (session.user as any)?.role || 'student';
+  const isAdmin = userRole === 'admin';
 
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', icon: '📊', roles: ['student', 'admin'] },

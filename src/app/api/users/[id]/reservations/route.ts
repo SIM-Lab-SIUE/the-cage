@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
-import { auth } from '../../../../../auth';
+import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '../../../../../../auth';
 import { PrismaClient } from '@prisma/client';
 import { startOfISOWeek, endOfISOWeek } from 'date-fns';
 
@@ -14,8 +14,8 @@ const prisma = new PrismaClient();
  * - Block usage summary per category
  */
 export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -27,10 +27,11 @@ export async function GET(
       );
     }
 
-    const requestedUserId = (await Promise.resolve(params)).id || params.id;
+    const { id: requestedUserId } = await params;
     
     // Users can only view their own reservations unless they're admin
-    if (session.user.id !== requestedUserId && session.user.role !== 'admin') {
+    const userRole = (session.user as { role?: string }).role;
+    if (session.user.id !== requestedUserId && userRole !== 'admin') {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }

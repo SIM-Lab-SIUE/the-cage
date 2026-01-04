@@ -59,8 +59,9 @@ const EquipmentCard: React.FC<EquipmentCardProps> = ({ asset, imageUrl, onReserv
       </span>
 
       {/* Image */}
+      {/* Use an internal proxy for external Snipe-IT images so browsers can load them */}
       <Image
-        src={imageUrl || '/placeholder-equipment.jpg'}
+        src={imageUrl ? `/api/image-proxy?u=${encodeURIComponent(imageUrl)}` : '/file.svg'}
         alt={name}
         width={400}
         height={192}

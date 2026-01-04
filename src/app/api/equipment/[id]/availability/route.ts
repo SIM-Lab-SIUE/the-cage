@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { auth } from '../../../../../../auth';
 import { startOfISOWeek, endOfISOWeek, addDays, startOfDay } from 'date-fns';
@@ -16,15 +16,16 @@ const prisma = new PrismaClient();
  * - Whether user can book based on 3-block limit
  */
 export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
     const { searchParams } = new URL(req.url);
     const daysAhead = parseInt(searchParams.get('days') || '30');
     
-    const assetId = parseInt((await Promise.resolve(params)).id || params.id);
+    const resolvedParams = await context.params;
+    const assetId = parseInt(resolvedParams.id);
     
     if (isNaN(assetId)) {
       return NextResponse.json(

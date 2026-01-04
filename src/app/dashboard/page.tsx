@@ -11,7 +11,7 @@ export default async function DashboardPage() {
   const session = await auth();
 
   if (!session || !session.user) {
-    redirect('/login');
+    redirect('/');
   }
 
   // Fetch user data with reservations

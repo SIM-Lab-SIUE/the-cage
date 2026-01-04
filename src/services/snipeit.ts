@@ -28,7 +28,6 @@ class SnipeITClient {
     while (retries > 0) {
       const response = await fetch(url, { ...options, headers });
       const text = await response.text();
-      console.log('SnipeIT response:', text); // Debug log
 
       if (response.status === 429) {
         await new Promise((resolve) => setTimeout(resolve, delay));

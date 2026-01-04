@@ -65,9 +65,9 @@ export default function EquipmentDetailPage({ params }: { params: { id: string }
       const id = (await Promise.resolve(params)).id || params.id;
       const response = await fetch(`/api/equipment?id=${id}`);
       const data = await response.json();
-      
-      if (data.rows && data.rows.length > 0) {
-        setAsset(data.rows[0]);
+      const list = data.assets || data.rows || [];
+      if (list.length > 0) {
+        setAsset(list[0]);
       }
     } catch (error) {
       console.error('Error fetching asset:', error);

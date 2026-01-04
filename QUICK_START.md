@@ -194,6 +194,7 @@ See any of these files for more details:
 - Technical issues: Check `README.md`
 - Testing procedures: See `PHASE_3_UAT_CHECKLIST.md`
 - Original requirements: Review `public/blueprint.md`
+- Direct support: Email aleith@siue.edu
 
 ---
 

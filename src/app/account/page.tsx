@@ -9,7 +9,7 @@ export default async function AccountPage() {
   const session = await auth();
 
   if (!session || !session.user) {
-    redirect('/login');
+    redirect('/');
   }
 
   // Fetch user data with all reservations and fines

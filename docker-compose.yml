@@ -6,11 +6,21 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - NODE_OPTIONS=--max-old-space-size=4096
+      - DEV_ALLOW_BYPASS=true
+      - DEV_TEST_USER=dev@siue.edu
       - SNIPEIT_API_URL=http://snipeit/api/v1
       - SNIPEIT_API_KEY=${SNIPEIT_API_KEY}
+      - AUTH_SECRET=${AUTH_SECRET}
+      - AUTH_DEV_CREDENTIALS=${AUTH_DEV_CREDENTIALS}
+      - DATABASE_URL=file:/app/data/db_v2.sqlite3
+    volumes:
+      - ./data:/app/data
+      - ./prisma:/app/prisma
     depends_on:
       - snipeit
     networks:

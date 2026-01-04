@@ -1,0 +1,16 @@
+# Ignore archived files
+_archived/
+
+# Ignore generated files
+.next/
+node_modules/
+prisma/generated/
+
+# Ignore build output
+out/
+build/
+dist/
+
+# Ignore test coverage
+coverage/
+.nyc_output/

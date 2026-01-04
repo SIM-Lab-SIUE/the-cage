@@ -189,7 +189,7 @@ No. Only the person picking up can make the reservation. This is for accountabil
 - **Visit**: Mass Communications Equipment Office
 - **Hours**: [Check your department's hours]
 - **Phone**: [Department phone number]
-- **Email**: [Department email]
+- **Email**: aleith@siue.edu
 
 ### In an Emergency:
 If you have equipment and can't return it during office hours due to emergency, contact staff immediately via email or phone to arrange alternative return.

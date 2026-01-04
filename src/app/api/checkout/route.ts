@@ -23,6 +23,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Only admins can checkout (staff-only operation)
+    const userRole = (session.user as any)?.role;
+    if (userRole !== 'admin') {
+      return NextResponse.json(
+        { error: 'Forbidden - Admin access required for checkout' },
+        { status: 403 }
+      );
+    }
+
     const { reservationId } = await req.json();
 
     if (!reservationId) {

@@ -1,15 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import EquipmentCard from '@/components/EquipmentCard';
 import Link from 'next/link';
 
 interface EquipmentItem {
   id: number;
+  name: string;
   assetTag: string;
-  modelName: string;
   category: string;
+  status: string;
   isAvailable: boolean;
+  imageUrl?: string | null;
 }
 
 interface CategoryGroup {
@@ -21,7 +23,7 @@ interface CategoryGroup {
 }
 
 export default function CatalogPage() {
-  const [categoryGroups, setCategoryGroups] = useState<CategoryGroup[]>([]);
+  const [items, setItems] = useState<EquipmentItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -31,14 +33,14 @@ export default function CatalogPage() {
     const fetchCatalog = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/catalog/summary');
+        const response = await fetch('/api/equipment');
         
         if (!response.ok) {
           throw new Error('Failed to fetch catalog');
         }
 
         const data = await response.json();
-        setCategoryGroups(data.categoryGroups || []);
+        setItems(data.assets || []);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unknown error';
         setError(message);
@@ -51,16 +53,37 @@ export default function CatalogPage() {
     fetchCatalog();
   }, []);
 
-  // Get all equipment items
-  const allEquipment = categoryGroups.flatMap(g => g.items);
+  const categoryGroups: CategoryGroup[] = useMemo(() => {
+    const groups: Record<string, EquipmentItem[]> = {};
+    items.forEach((item) => {
+      const cat = item.category || 'Unknown';
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(item);
+    });
 
-  // Filter equipment
-  const filteredEquipment = allEquipment.filter(item => {
-    const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
-    const matchesSearch = item.modelName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         item.assetTag.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+    return Object.entries(groups).map(([category, groupItems]) => {
+      const available = groupItems.filter((i) => i.isAvailable).length;
+      return {
+        category,
+        total: groupItems.length,
+        available,
+        checkedOut: groupItems.length - available,
+        items: groupItems,
+      };
+    });
+  }, [items]);
+
+  const allEquipment = useMemo(() => items, [items]);
+
+  const filteredEquipment = useMemo(() => {
+    const term = searchQuery.toLowerCase();
+    return allEquipment.filter((item) => {
+      const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
+      const matchesSearch =
+        item.name.toLowerCase().includes(term) || item.assetTag.toLowerCase().includes(term);
+      return matchesCategory && matchesSearch;
+    });
+  }, [allEquipment, selectedCategory, searchQuery]);
 
   const handleReserve = (assetId: number) => {
     window.location.href = `/catalog/${assetId}`;
@@ -124,7 +147,10 @@ export default function CatalogPage() {
         <div className="mb-8 space-y-4">
           {/* Search Bar */}
           <div className="flex gap-2">
+            <label htmlFor="catalog-search" className="sr-only">Search equipment</label>
             <input
+              id="catalog-search"
+              name="catalogSearch"
               type="text"
               placeholder="Search by equipment name or asset tag..."
               value={searchQuery}
@@ -169,12 +195,13 @@ export default function CatalogPage() {
                 key={item.id}
                 asset={{
                   id: item.id,
-                  name: item.modelName,
+                  name: item.name,
                   assetTag: item.assetTag,
                   category: item.category,
                   status: item.isAvailable ? 'Ready to Deploy' : 'Checked Out',
                   isAvailable: item.isAvailable,
                 }}
+                imageUrl={item.imageUrl || undefined}
                 onReserve={handleReserve}
               />
             ))

@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client';
 import Link from 'next/link';
 import QRCodeDisplay from '@/components/QRCodeDisplay';
 import { IcsDownloadButton, PrintButton } from '@/components/ClientActions';
+import { auth } from '../../../../auth';
 
 const prisma = new PrismaClient();
 
@@ -12,6 +13,13 @@ interface ReservationSuccessPageProps {
 }
 
 export default async function ReservationSuccessPage({ searchParams }: ReservationSuccessPageProps) {
+  const session = await auth();
+  
+  if (!session?.user) {
+    redirect('/');
+  }
+  
+  const userRole = (session.user as any)?.role || 'student';
   const { id: reservationId } = await searchParams;
 
   if (!reservationId) {
@@ -64,13 +72,17 @@ export default async function ReservationSuccessPage({ searchParams }: Reservati
           Reservation Confirmed!
         </h1>
         <p className="text-center text-gray-600 mb-8">
-          Your equipment has been reserved. Show this QR code when picking up your equipment.
+          {userRole === 'admin' 
+            ? 'Your equipment has been reserved. Show this QR code when picking up your equipment.'
+            : 'Your equipment has been reserved. Show your reservation details when picking up your equipment.'}
         </p>
 
-        {/* QR Code */}
-        <div className="flex justify-center mb-8">
-          <QRCodeDisplay value={reservationId} />
-        </div>
+        {/* QR Code - Admin Only */}
+        {userRole === 'admin' && (
+          <div className="flex justify-center mb-8">
+            <QRCodeDisplay value={reservationId} />
+          </div>
+        )}
 
         {/* Reservation Details */}
         <div className="border-t border-b border-gray-200 py-6 mb-6">
@@ -124,11 +136,23 @@ export default async function ReservationSuccessPage({ searchParams }: Reservati
         <div className="bg-blue-50 rounded-lg p-4 mb-6">
           <h3 className="text-sm font-semibold text-blue-900 mb-2">What's Next?</h3>
           <ol className="list-decimal list-inside space-y-2 text-sm text-blue-800">
-            <li>Save this page or take a screenshot of the QR code</li>
-            <li>Arrive at the equipment office during your pickup window</li>
-            <li>Show the QR code to the staff member</li>
-            <li>They will scan it and check out your equipment</li>
-            <li>Return the equipment by the specified return time to avoid late fees</li>
+            {userRole === 'admin' ? (
+              <>
+                <li>Save this page or take a screenshot of the QR code</li>
+                <li>Arrive at the equipment office during your pickup window</li>
+                <li>Show the QR code to the staff member</li>
+                <li>They will scan it and check out your equipment</li>
+                <li>Return the equipment by the specified return time to avoid late fees</li>
+              </>
+            ) : (
+              <>
+                <li>Save your reservation details or add to your calendar</li>
+                <li>Arrive at the equipment office during your pickup window</li>
+                <li>Provide your name and reservation ID to the staff</li>
+                <li>Staff will verify your reservation and check out your equipment</li>
+                <li>Return the equipment by the specified return time to avoid late fees</li>
+              </>
+            )}
           </ol>
         </div>
 

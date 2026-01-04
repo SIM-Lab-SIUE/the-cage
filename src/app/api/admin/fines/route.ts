@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   try {
     const session = await auth();
 
-    // Verify staff/admin role (check if user email contains 'admin' or has admin flag)
+    // Verify staff/admin role
     if (!session || !session.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -27,11 +27,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // Basic auth check - in production, implement proper role-based access
-    const isAdmin = session.user.email?.includes('admin');
-    if (!isAdmin) {
+    const userRole = (session.user as any)?.role;
+    if (userRole !== 'admin') {
       return NextResponse.json(
-        { error: 'Unauthorized - Admin access required' },
+        { error: 'Forbidden - Admin access required' },
         { status: 403 }
       );
     }

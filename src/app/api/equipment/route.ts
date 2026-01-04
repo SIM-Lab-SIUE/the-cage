@@ -1,7 +1,10 @@
 // src/app/api/equipment/route.ts
 import { NextResponse } from 'next/server';
 import { auth } from '../../../../auth';
+import { PrismaClient } from '@prisma/client';
 import type { Asset } from '@/lib/snipe-it';
+
+const prisma = new PrismaClient();
 
 // Support both SNIPE_IT_* and SNIPEIT_* env variable names
 const SNIPE_IT_API_URL = process.env.SNIPE_IT_API_URL || process.env.SNIPEIT_API_URL;
@@ -11,12 +14,52 @@ const SNIPE_IT_API_KEY = process.env.SNIPE_IT_API_KEY || process.env.SNIPEIT_API
  * GET /api/equipment
  * 
  * Fetches equipment catalog from Snipe-IT and transforms it for frontend consumption
- * Strips sensitive administrative data before sending to client
+ * For students: filters by courses they are enrolled in
+ * For admins: shows all equipment
  */
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    // Equipment catalog is public - no auth required for browsing
-    // (actual checkout requires auth via separate /api/checkout route)
+    const { searchParams } = new URL(req.url);
+    const idParam = searchParams.get('id');
+    
+    // Get session to determine role and course access
+    const session = await auth();
+    const userRole = (session?.user as any)?.role || 'student';
+    let allowedAssetIds: number[] | null = null;
+    
+    // For students, filter by enrolled courses
+    if (userRole === 'student' && session?.user?.email) {
+      const user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        include: {
+          courses: {
+            include: {
+              course: {
+                include: {
+                  assets: true
+                }
+              }
+            }
+          }
+        }
+      });
+      
+      if (user) {
+        // Collect all asset IDs from all enrolled courses
+        const assetIds = new Set<number>();
+        user.courses.forEach(uc => {
+          uc.course.assets.forEach(ac => {
+            assetIds.add(ac.assetId);
+          });
+        });
+        allowedAssetIds = Array.from(assetIds);
+        
+        // If student has no courses, show empty catalog
+        if (allowedAssetIds.length === 0) {
+          return NextResponse.json({ assets: [], rows: [] });
+        }
+      }
+    }
 
     if (!SNIPE_IT_API_URL || !SNIPE_IT_API_KEY) {
       return NextResponse.json(
@@ -47,18 +90,46 @@ export async function GET() {
     const assets = data.rows as Asset[];
 
     // Transform and sanitize data for client
-    const sanitizedAssets = assets.map((asset) => ({
-      id: asset.id,
-      name: asset.name,
-      assetTag: asset.asset_tag,
-      category: asset.category?.name || 'Unknown',
-      status: asset.status_label?.name || 'Unknown',
-      isAvailable: asset.status_label?.status_type === 'deployable',
-      // Extract custom fields if needed (e.g., semester access)
-      semesterAccess: asset.custom_fields?.['Semester Access']?.value || null,
-    }));
+    const sanitizedAssets = assets.map((asset) => {
+      const rawImage = (asset as any).image || (asset as any).image_url || (asset as any).image_thumb || null;
 
-    return NextResponse.json({ assets: sanitizedAssets });
+      let imageUrl: string | null = null;
+      if (rawImage && typeof rawImage === 'string') {
+        imageUrl = rawImage.startsWith('http')
+          ? rawImage
+          : `${SNIPE_IT_API_URL?.replace(/\/$/, '')}/${rawImage.replace(/^\//, '')}`;
+      } else if (rawImage && typeof rawImage === 'object') {
+        const candidate = (rawImage as any).url || (rawImage as any).thumb || (rawImage as any).image || null;
+        if (candidate && typeof candidate === 'string') {
+          imageUrl = candidate.startsWith('http')
+            ? candidate
+            : `${SNIPE_IT_API_URL?.replace(/\/$/, '')}/${candidate.replace(/^\//, '')}`;
+        }
+      }
+
+      return {
+        id: asset.id,
+        name: asset.name,
+        assetTag: asset.asset_tag,
+        category: asset.category?.name || 'Unknown',
+        status: asset.status_label?.name || 'Unknown',
+        isAvailable: asset.status_label?.status_type === 'deployable',
+        imageUrl,
+        // Extract custom fields if needed (e.g., semester access)
+        semesterAccess: asset.custom_fields?.['Semester Access']?.value || null,
+      };
+    });
+
+    // Apply course-based filtering for students
+    let filtered = idParam
+      ? sanitizedAssets.filter((a) => a.id === Number(idParam))
+      : sanitizedAssets;
+    
+    if (allowedAssetIds !== null) {
+      filtered = filtered.filter(a => allowedAssetIds!.includes(a.id));
+    }
+
+    return NextResponse.json({ assets: filtered, rows: filtered });
   } catch (error) {
     console.error('Equipment API Error:', error);
     // Fallback to mock data on error

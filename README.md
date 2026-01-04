@@ -6,6 +6,17 @@
 
 The Cage is a production-ready Next.js application designed for the Broadcast Engineers and Mass Communications students at Southern Illinois University Edwardsville. It provides a modern, integrated platform for reserving, checking out, and managing broadcast production equipment with real-time availability tracking and comprehensive fee management.
 
+## 📚 Documentation
+
+**Quick Links:**
+- **[🚀 LAUNCH_READINESS_CHECKLIST.md](LAUNCH_READINESS_CHECKLIST.md)** - Complete pre-launch checklist and roadmap
+- **[📖 COMPREHENSIVE_DOCUMENTATION.md](COMPREHENSIVE_DOCUMENTATION.md)** - Complete technical documentation
+- **[⚡ QUICK_START.md](QUICK_START.md)** - Get started in 5 minutes
+- **[📅 DAILY_STARTUP.md](DAILY_STARTUP.md)** - Daily development workflow
+- **[👤 USER_GUIDE.md](USER_GUIDE.md)** - End-user instructions
+- **[🔐 ENTRA_ID_SETUP.md](ENTRA_ID_SETUP.md)** - Azure AD configuration
+- **[🧪 TEST_ACCOUNTS.md](TEST_ACCOUNTS.md)** - Development test credentials
+
 ## 🎬 Features
 
 ### Core Functionality
@@ -543,7 +554,7 @@ This project is licensed under the **MIT License**. See [LICENSE](./LICENSE) fil
 
 For issues, feature requests, or questions:
 - GitHub Issues: Create an issue in the repository
-- Email: [maintainer-email]
+- Email: aleith@siue.edu
 - Documentation: See [DEVELOPER_LOG.md](./DEVELOPER_LOG.md) for architecture details
 
 ---

@@ -19,10 +19,10 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const isAdmin = session.user.email?.includes('admin');
-    if (!isAdmin) {
+    const userRole = (session.user as any)?.role;
+    if (userRole !== 'admin') {
       return NextResponse.json(
-        { error: 'Unauthorized - Admin access required' },
+        { error: 'Forbidden - Admin access required' },
         { status: 403 }
       );
     }

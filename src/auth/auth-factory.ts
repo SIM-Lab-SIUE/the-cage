@@ -43,12 +43,35 @@ export function getAuthConfig(): NextAuthConfig {
               const email = typeof credentials?.email === 'string' ? credentials.email : '';
 
               if (email.endsWith('@siue.edu')) {
-                return { id: '1', name: 'Mock User', email } as any;
+                // Determine role based on email
+                const adminEmails = ['aleith@siue.edu', 'tpauli@siue.edu', 'bemoyer@siue.edu'];
+                const role = adminEmails.includes(email.toLowerCase()) ? 'admin' : 'student';
+                
+                return { 
+                  id: email, 
+                  name: email.split('@')[0], 
+                  email,
+                  role 
+                } as any;
               }
               return null;
             },
           }),
         ],
+        callbacks: {
+          async jwt({ token, user }) {
+            if (user) {
+              token.role = (user as any).role;
+            }
+            return token;
+          },
+          async session({ session, token }) {
+            if (session.user) {
+              (session.user as any).role = token.role;
+            }
+            return session;
+          },
+        },
       };
   }
 }

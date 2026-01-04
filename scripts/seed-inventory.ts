@@ -62,9 +62,9 @@ async function seedInventory() {
         });
 
         if ((createdCount + 1) % 10 === 0) {
-          if ((createdCount + 1) % 10 === 0) {
           console.log(`✓ Created ${createdCount + 1} assets...`);
         }
+
         createdCount++;
       } catch (error: unknown) {
         if (error instanceof Error && error.message.includes('Unique constraint failed')) {

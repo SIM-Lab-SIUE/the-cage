@@ -44,6 +44,7 @@ export default async function CalendarPage() {
     id: asset.id.toString(),
     title: `${asset.modelName} (${asset.assetTag})`,
     category: asset.category,
+    assetTag: asset.assetTag,
   }));
 
   const events = reservations.map(res => ({
@@ -59,10 +60,13 @@ export default async function CalendarPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-[95%] mx-auto">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Equipment Availability Calendar</h1>
+        <div className="mb-6 flex flex-col gap-2">
+          <div className="inline-flex items-center gap-2 self-start rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
+            Unified Calendar v2
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900">Equipment Availability Calendar</h1>
           <p className="text-gray-600">
-            View all equipment reservations and availability across the next 30 days
+            View all equipment reservations and availability across the next 30 days. Use search, category filters, paging, and Reserve buttons on each row.
           </p>
         </div>
         <UnifiedCalendar resources={resources} events={events} />

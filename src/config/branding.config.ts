@@ -16,7 +16,7 @@ export const brandingConfig: BrandingConfig = {
   departmentName: "The Cage",
   institutionName: "SIUE Mass Communications",
   logoUrl: "https://example.com/logo.png", // Replace with the actual logo URL
-  supportEmail: "support@siue.edu", // Replace with the actual support email
+  supportEmail: "aleith@siue.edu", // Temporary support contact until dedicated address is set up
   theme: {
     primary: "#e31837", // SIUE Red
     secondary: "#ffffff", // Default white

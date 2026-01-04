@@ -29,8 +29,7 @@ interface ResourceCalendarProps {
 export default function ResourceCalendar({ resources, events }: ResourceCalendarProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleDateClick = (arg: any) => {
-    console.log('Clicked resource:', arg.resource);
-    console.log('Clicked date:', arg.date);
+    // Click handling logic can be added here
   };
 
   return (

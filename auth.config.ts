@@ -1,68 +1,78 @@
 // auth.config.ts
 import type { NextAuthConfig } from "next-auth"
-import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id"
 import Credentials from "next-auth/providers/credentials"
+// import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id"
 
 /**
  * Auth configuration for NextAuth v5
- * This file is edge-compatible and can be used in middleware
+ * Edge-compatible for use in middleware
+ * 
+ * PRODUCTION TODO: Uncomment MicrosoftEntraID import and provider below
+ * when ready to enable SAML authentication via Microsoft Entra ID
  */
 export const authConfig = {
   providers: [
-    MicrosoftEntraID({
-      clientId: process.env.AUTH_MICROSOFT_ENTRA_ID_ID,
-      clientSecret: process.env.AUTH_MICROSOFT_ENTRA_ID_SECRET,
-      issuer: process.env.AUTH_MICROSOFT_ENTRA_ID_ISSUER,
-      authorization: {
-        params: {
-          scope: "openid profile email User.Read",
-        },
+    // PRODUCTION: Uncomment this block when Entra ID credentials are configured
+    // MicrosoftEntraID({
+    //   clientId: process.env.AUTH_MICROSOFT_ENTRA_ID_ID,
+    //   clientSecret: process.env.AUTH_MICROSOFT_ENTRA_ID_SECRET,
+    //   issuer: process.env.AUTH_MICROSOFT_ENTRA_ID_ISSUER,
+    //   authorization: {
+    //     params: {
+    //       scope: "openid profile email User.Read",
+    //     },
+    //   },
+    // }),
+    
+    // DEV: Simple credentials provider for development/testing
+    // Remove or disable this when Entra ID is active
+    Credentials({
+      id: "credentials",
+      name: "SIUE Credentials",
+      credentials: {
+        email: { label: "Email", type: "text", placeholder: "username@siue.edu" },
+        password: { label: "Password", type: "password" },
+      },
+      authorize: async (credentials) => {
+        const email = (credentials?.email || "").toString().toLowerCase().trim()
+        
+        // Validate SIUE email domain
+        if (!email.endsWith('@siue.edu')) {
+          return null
+        }
+        
+        // Determine role based on admin list
+        const adminEmails = ['aleith@siue.edu', 'tpauli@siue.edu', 'bemoyer@siue.edu']
+        const role = adminEmails.includes(email) ? 'admin' : 'student'
+        const name = email.split("@")[0]
+        
+        return {
+          id: email,
+          email,
+          name,
+          role,
+        } as any
       },
     }),
-    // Optional dev-only credentials provider for UAT
-    ...(process.env.AUTH_DEV_CREDENTIALS === "1"
-      ? [
-          Credentials({
-            id: "credentials",
-            name: "Dev Credentials",
-            credentials: {
-              email: { label: "Email", type: "text" },
-              password: { label: "Password", type: "password" },
-            },
-            authorize: async (credentials) => {
-              const email = (credentials?.email || "").toString().toLowerCase().trim()
-              const name = email.split("@")[0] || "Test User"
-              if (!email) return null
-              // Allow any password in dev; simple role heuristic
-              const isStaff = email.endsWith("@siue.edu") && email.startsWith("staff")
-              return {
-                id: `dev-${email}`,
-                email,
-                name,
-                role: isStaff ? "staff" : "student",
-              } as any
-            },
-          }),
-        ]
-      : []),
   ],
-  pages: process.env.AUTH_DEV_CREDENTIALS === "1"
-    ? undefined
-    : {
-        signIn: '/login',
-        error: '/login',
-      },
+  pages: {
+    signIn: '/login',
+    error: '/login',
+  },
   callbacks: {
-    authorized({ auth, request: { nextUrl } }) {
-      const isLoggedIn = !!auth?.user
-      const isOnLoginPage = nextUrl.pathname === '/login'
-      
-      if (isOnLoginPage) {
-        if (isLoggedIn) return Response.redirect(new URL('/', nextUrl))
-        return true
+    async jwt({ token, user }) {
+      // Pass role from user object to token
+      if (user && (user as any).role) {
+        token.role = (user as any).role
       }
-      
-      return isLoggedIn
+      return token
+    },
+    async session({ session, token }) {
+      // Pass role from token to session
+      if (session.user && token.role) {
+        (session.user as any).role = token.role
+      }
+      return session
     },
   },
 } satisfies NextAuthConfig

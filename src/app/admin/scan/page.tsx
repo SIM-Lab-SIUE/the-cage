@@ -1,12 +1,25 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import StaffScanner from '@/components/StaffScanner';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 const ScanPage: React.FC = () => {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [lastScannedCode, setLastScannedCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Redirect non-admin users
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/');
+    } else if (status === 'authenticated' && (session?.user as any)?.role !== 'admin') {
+      router.push('/dashboard');
+    }
+  }, [session, status, router]);
 
   const handleAssetDetected = async (code: string) => {
     setLastScannedCode(code);

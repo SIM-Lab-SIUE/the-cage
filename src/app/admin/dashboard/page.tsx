@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 interface Reservation {
   id: string;
@@ -26,10 +28,21 @@ interface Reservation {
 }
 
 export default function AdminDashboardPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'today' | 'pickups' | 'returns'>('today');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Redirect non-admin users
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/');
+    } else if (status === 'authenticated' && (session?.user as any)?.role !== 'admin') {
+      router.push('/dashboard');
+    }
+  }, [session, status, router]);
 
   useEffect(() => {
     fetchReservations();
@@ -231,7 +244,10 @@ export default function AdminDashboardPage() {
               </button>
             </div>
 
+            <label htmlFor="admin-search" className="sr-only">Search reservations</label>
             <input
+              id="admin-search"
+              name="adminSearch"
               type="text"
               placeholder="Search by student name, equipment, or asset tag..."
               value={searchQuery}

@@ -24,10 +24,10 @@ export async function POST(req: Request) {
     }
 
     // Verify admin access
-    const isAdmin = session.user.email?.includes('admin');
-    if (!isAdmin) {
+    const userRole = (session.user as any)?.role;
+    if (userRole !== 'admin') {
       return NextResponse.json(
-        { error: 'Unauthorized - Admin access required' },
+        { error: 'Forbidden - Admin access required' },
         { status: 403 }
       );
     }
