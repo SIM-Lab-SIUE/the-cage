@@ -309,9 +309,10 @@ The application uses **NextAuth v5** with a flexible provider factory pattern:
 
 ### Development (Mock Provider)
 ```typescript
-// Uses hardcoded credentials for rapid development
+// Dev-only credentials provider (AUTH_DEV_CREDENTIALS=1)
+// Accepts any password for @siue.edu emails; role inferred from email
 Username: student@siue.edu
-Password: password
+Password: any string (dev only)
 ```
 
 ### Production (Azure AD)

@@ -555,15 +555,17 @@ sudo certbot --nginx -d thecage.siue.edu
 
 ### Test Accounts (Development)
 
-**Admin Accounts:**
-- Email: `aleith@siue.edu` / Password: `password`
-- Email: `tpauli@siue.edu` / Password: `password`
-- Email: `bemoyer@siue.edu` / Password: `password`
+When `AUTH_DEV_CREDENTIALS=1`, the dev credentials provider accepts any password for the emails below (used only in local/dev). For production/UAT, use Entra ID SSO.
 
-**Student Accounts:**
-- Email: `jsmith@siue.edu` / Password: `password`
-- Email: `mjones@siue.edu` / Password: `password`
-- Email: `bwilson@siue.edu` / Password: `password`
+**Admin Accounts (dev-only):**
+- Email: `aleith@siue.edu`
+- Email: `tpauli@siue.edu`
+- Email: `bemoyer@siue.edu`
+
+**Student Accounts (dev-only):**
+- Email: `jsmith@siue.edu`
+- Email: `mjones@siue.edu`
+- Email: `bwilson@siue.edu`
 
 ### UAT Test Scenarios
 
